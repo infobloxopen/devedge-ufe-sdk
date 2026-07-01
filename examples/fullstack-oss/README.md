@@ -28,8 +28,10 @@ The point of the example is the **frontend-to-backend loop** and the
 The **shell** instantiates the OIDC `SessionProvider` once and threads it into
 the uFE as a prop. The uFE receives only the read-only session view — it reads
 the token, reads claims, and requests login/logout, but it never constructs a
-session or reaches the identity provider. The standalone shell in
-`frontend/notes-ufe/src/shell/main.ts` shows exactly where that boundary lives.
+session or reaches the identity provider. The runnable shell in
+`frontend/shell/` (a single-spa root-config with its own `index.html` +
+`root-config.ts`) shows exactly where that boundary lives; `shell.yaml` routes
+its topology (see below).
 
 ---
 
@@ -144,10 +146,47 @@ Both live in `frontend/notes-ufe/src/environments/environment.ts`:
 
 ---
 
-## 4. How the shell owns the session, and the uFE consumes it
+## 4. Run the shell: `de project up -f shell.yaml`
 
-`frontend/notes-ufe/src/shell/main.ts` is a tiny standalone shell that plays the
-host role. It does three things a uFE must never do:
+`frontend/shell/` is a runnable single-spa **shell** — an `index.html` with a
+native `<script type="importmap">` and a `root-config.ts` that registers the uFE
+and calls `start()`. `shell.yaml` describes its topology, and the devedge CLI
+routes it through the same path every other kind uses:
+
+```sh
+# from a checkout of infobloxopen/devedge
+go build -o /tmp/de ./cmd/de
+
+# from examples/fullstack-oss
+/tmp/de project up -f shell.yaml
+```
+
+That renders these edge routes (host names resolve through the devedge dev
+proxy):
+
+| URL                            | Serves                                              |
+|--------------------------------|-----------------------------------------------------|
+| `notesapp.dev.test/`           | the shell (root-config + chrome) at `/`             |
+| `notesapp.dev.test/api/*`      | the notesd REST gateway, same origin, prefix stripped |
+| `cdn.dev.test/notes/main.js`   | the notes-ufe bundle from `cdn.dev.test`, prefix stripped |
+| `notesapp.dev.test/#notes`     | mounts notes-ufe (hash route — never reaches the edge) |
+
+**Hash routing.** The shell selects a uFE by the URL **hash** (`#notes` mounts
+notes-ufe): `root-config.ts`'s `activeWhen` is a predicate over `location.hash`,
+not the path. So the uFE surface never hits the edge — only its CDN asset path
+does — and clicking between uFEs never triggers a full page load.
+
+**Native-importmap loading (and why).** The shell loads each uFE bundle with a
+**native** dynamic `import(/* webpackIgnore: true */ 'notes-ufe')`; the browser's
+importmap resolves `notes-ufe` to `https://cdn.dev.test/notes/main.js`. It is not
+SystemJS — Angular's `ng serve` emits **ESM** bundles, which native browser
+importmaps feed straight into the ESM loader but SystemJS cannot load. The
+`webpackIgnore` magic comment keeps the bundler from resolving the specifier at
+build time, so the fetch goes through the runtime importmap.
+
+### How the shell owns the session
+
+`root-config.ts` does three things a uFE must never do:
 
 1. **Instantiates the `OidcSessionProvider` once** from the generic `oidc`
    config, and completes the auth-code / silent-renew redirects on `/callback`
@@ -158,6 +197,10 @@ host role. It does three things a uFE must never do:
 3. **Registers the uFE with `createShell`**, which awaits `session.getToken()`
    before any uFE mounts — proving the shell holds a session — then threads
    `session` into the uFE as a `HostProps` prop.
+
+> `frontend/notes-ufe/src/shell/main.ts` is an in-`src` twin of this root-config
+> (same hash-routing + native-import model), kept so the uFE project type-checks
+> the boundary standalone. The deployable shell is `frontend/shell/`.
 
 The uFE side:
 
@@ -224,9 +267,20 @@ override('notes-ufe', 'https://localhost:4200/main.js');
 The example is self-contained and verified apart from the SDK's own CI:
 
 - **Backend:** `make generate && make build && make test` — all green.
-- **Frontend:** build the local SDK packages, `pnpm install --ignore-workspace`,
-  then `pnpm run typecheck` (`tsc --noEmit`) over `src/`. The API service, the
-  shell wiring, and the validated manifest type-check against the SDK's `.d.ts`.
+- **uFE:** build the local SDK packages, `pnpm install --ignore-workspace`,
+  then `pnpm run typecheck` (`tsc -p tsconfig.app.json --noEmit`) over `src/`.
+  The API service, the in-`src` shell twin, and the validated manifest
+  type-check against the SDK's `.d.ts`.
+- **Shell:** `frontend/shell/` type-checks with
+  `tsc -p tsconfig.json --noEmit` (it reuses the uFE's installed packages via
+  `paths`). `shell.yaml` validates against the devedge CLI's `kind: Shell`
+  parser.
+
+> **`ng build` caveat.** The uFE targets Angular 15 (TypeScript ~4.9); a full
+> `ng build` may not run under a very new Node. The **type surface** checks
+> standalone via `tsc --noEmit` (above) — that is what the verification step
+> runs; the full Angular production build is a separate step you run under a
+> compatible Node.
 
 The example is **not** part of the SDK's pnpm workspace (see the root
 `pnpm-workspace.yaml`), so it never affects the SDK's package build or CI.
