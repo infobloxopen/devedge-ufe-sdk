@@ -1,0 +1,15 @@
+# Flux source for the framework-owned Helm chart. The chart is PUBLISHED by the
+# framework to an OCI registry (see deploy/k8s/README.md); this service repo never
+# carries the chart itself — only this reference + the HelmRelease + values
+# overlay. Point .spec.url at your published chart registry.
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: OCIRepository
+metadata:
+  name: notesd-chart
+  namespace: notesd
+spec:
+  interval: 10m
+  # CHANGEME: the OCI registry the framework publishes the chart to.
+  url: oci://ghcr.io/infobloxopen/charts/devedge-service
+  ref:
+    tag: "0.1.0"

@@ -1,0 +1,245 @@
+# Notesd
+
+`NoteService` — an apx-native, authz-gated, persisting gRPC + HTTP service over the
+`Note` resource, scaffolded by [`devedge-sdk new service`](https://github.com/infobloxopen/devedge-sdk).
+
+- **Public API:** the proto under `proto/notesd/v1/` is the apx-governed surface. Every RPC
+  carries an `(infoblox.authz.v1.rule)`; the server asserts at boot that all methods are declared and
+  refuses to start otherwise (fail-closed authz).
+- **Private implementation:** the models, repository, service registration, and gateway are **generated**
+  from the proto by `buf generate` (the devedge-sdk plugins) into `gen/`. The plugin version `make tools`
+  installs is derived from the `github.com/infobloxopen/devedge-sdk` require in `go.mod` (the single
+  source of truth) — bump the SDK with `go get github.com/infobloxopen/devedge-sdk@vX.Y.Z`, then
+  re-run `make tools`. Engine (gorm) dependencies live only in this module's `go.mod`.
+
+## Fresh clone — bootstrap first
+
+`gen/` is generated code and is **git-ignored** (see `.gitignore`), so a fresh clone has none. Building
+before generating fails with `no required module provides package .../gen/...`. Generate first:
+
+```sh
+make tools      # install the codegen plugins (buf, the devedge-sdk plugins) + spectral (for api-lint) onto PATH
+make generate   # buf generate -> gen/ (the gorm models, repository, service, gateway)
+make test       # build + run the smoke + security tests
+```
+
+`make test` runs two generated test files in `cmd/notesd/`:
+
+- `notesd_smoke_test.go` — a tenant-scoped CRUD round-trip plus a fail-closed deny.
+- `notesd_security_test.go` — `seccheck` assertions that turn the SDK's security
+  invariants (complete authz rules, unknown-principal deny, tenant isolation, clean error messages,
+  no secret-field leaks) into standard `go test` failures, so a security regression fails CI the
+  moment it merges. See the [Security Check how-to](https://infobloxopen.github.io/devedge-sdk/docs/how-to/secure/security-check/).
+
+`make bootstrap` runs `tools` + `generate` in one step. `make build`, `make test`, and `make run`
+auto-generate on first use if `gen/` is missing, then stay fast (they do **not** regenerate on every
+invocation). Re-run `make generate` explicitly after editing the proto.
+
+Prerequisites: [`apx`](https://github.com/infobloxopen/apx), [`buf`](https://buf.build), and Go (see
+`go.mod` for the version). `make api-lint` additionally needs
+[`spectral`](https://github.com/stoplightio/spectral) (a Node tool, `npm install -g @stoplight/spectral-cli`)
+to lint the generated OpenAPI surface; `make tools` installs it for you when npm is present.
+
+## Run it
+
+```sh
+make run   # serves gRPC on :9090, HTTP on :8080
+```
+
+The dev server grants the `admin` group everything and derives the caller's identity from request
+metadata via `grpcauthz.DevPrincipalFunc`. A call is authorized when it sends `account-id: <tenant>`
+and `groups: admin`:
+
+```sh
+grpcurl -plaintext -H 'account-id: t1' -H 'groups: admin' \
+  -d '{"note": {"id": "note-1", "display_name": "first"}}' \
+  localhost:9090 notesd.v1.NoteService/CreateNote
+```
+
+Swap the dev authorizer and `PrincipalFunc` in `cmd/notesd/main.go` for a real policy +
+verified-token function in production — nothing else changes.
+
+## Call it over HTTP
+
+The same RPCs are reachable over the JSON gateway on `:8080`, with the caller's identity in
+`account-id` / `groups` headers. Two gateway mappings are easy to get wrong:
+
+**Create** maps `body: "note"`, so the JSON body **is** the `Note` sent at the
+top level — not wrapped in a request field named `note`:
+
+```sh
+curl -X POST localhost:8080/v1/notes \
+  -H 'account-id: t1' -H 'groups: admin' -H 'Content-Type: application/json' \
+  -d '{"display_name": "first"}'
+```
+
+**Update** maps `{patch: "/v1/notes/{id}", body: "note"}`: the id is in the
+URL path, the body is again the bare `Note`, and the fields to change ride in an `update_mask`
+**query parameter** — one repeated param per field, in proto snake_case:
+
+```sh
+curl -X PATCH 'localhost:8080/v1/notes/<id>?update_mask=display_name&update_mask=description' \
+  -H 'account-id: t1' -H 'groups: admin' -H 'Content-Type: application/json' \
+  -d '{"display_name": "renamed", "description": "updated"}'
+```
+
+> **A misplaced `update_mask` silently updates nothing.** `update_mask` is a `repeated string`, so it
+> must be repeated query params (`?update_mask=a&update_mask=b`). An `update_mask` in the JSON body,
+> comma-joining (`?update_mask=a,b`), or camelCase (`?update_mask=displayName`) parses as no mask: the
+> call returns HTTP 200 with a fresh etag and zero fields changed. The same flattening applies to
+> Create — a wrapped body (`{"note": {...}}`) decodes to an empty resource, not an error.
+> Full encoding table: the [gateway `update_mask` reference](https://infobloxopen.github.io/devedge-sdk/docs/reference/persistence/#update_mask-encoding-over-the-gateway).
+
+## Configuration
+
+The service loads its settings through the SDK's `config.Load` seam with the following precedence
+(highest → lowest): **flags > environment > `.env` file > built-in defaults**.
+
+| Env var | Flag | Default | Purpose |
+|---|---|---|---|
+| `NOTESD_GRPC_ADDR` | `-GRPC_ADDR` | `:9090` | gRPC listen address |
+| `NOTESD_HTTP_ADDR` | `-HTTP_ADDR` | `:8080` | HTTP gateway address |
+| `NOTESD_LOG_LEVEL` | `-LOG_LEVEL` | `info` | Minimum log level (debug/info/warn/error) |
+| `NOTESD_OTLP_ENDPOINT` | `-OTLP_ENDPOINT` | `""` | OTel collector endpoint (falls back to `$OTEL_EXPORTER_OTLP_ENDPOINT`) |
+| `NOTESD_DSN` | `-DSN` | `""` | Database connection string (empty → in-memory SQLite) |
+
+**Examples:**
+
+Override via environment:
+```sh
+NOTESD_GRPC_ADDR=:9191 NOTESD_HTTP_ADDR=:8181 make run
+```
+
+Override via `.env` file (create a `.env` in the project root):
+```ini
+NOTESD_GRPC_ADDR=:9191
+NOTESD_DSN=postgres://user:pass@localhost/mydb
+```
+
+Override via flag:
+```sh
+go run ./cmd/notesd -GRPC_ADDR :9191 -HTTP_ADDR :8181
+```
+
+## Health & readiness probes
+
+The server exposes probe endpoints on the HTTP gateway (`:8080`):
+
+| Endpoint | Use | Behaviour |
+|----------|-----|-----------|
+| `GET /healthz` | Liveness | Returns `200` as long as the process is up. Point k8s `livenessProbe` here. |
+| `GET /readyz`  | Readiness | Returns `200` when all readiness checks pass; `503 + JSON` listing failures otherwise. Point k8s `readinessProbe` here. |
+
+Both endpoints are **unauthenticated** (reachable by the kubelet without credentials). The DB-ping check is registered by default: `/readyz` returns `503` if the database is unreachable.
+
+A gRPC-native probe is also available (`grpc.health.v1.Health/Check`); it reflects the same readiness state.
+
+To add a custom readiness check, implement `health.Check` and register it via `app.Health.Register` in the module's `Register` (see `module/module.go`).
+
+## Observability (OpenTelemetry)
+
+Tracing, RED metrics, and trace-correlated structured logging are **on by default** — `main.go`
+calls `otel.Setup(...)` and the SDK server emits per-RPC spans + metrics and one end-to-end trace
+across the REST→gRPC hop, with no per-handler code. It is **free until configured**: with no
+collector endpoint the exporter no-ops, so the service runs unchanged with zero overhead.
+
+Point it at a collector with the standard `OTEL_*` env — no code change:
+
+```sh
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 \
+OTEL_SERVICE_NAME=notesd \
+make run
+```
+
+For console traces in local dev, set `Exporter: "stdout"` in the `otel.Config` in
+`cmd/notesd/main.go`; set `"none"` to disable. Request logs are structured (slog) and carry
+`trace_id`/`span_id`; secret-annotated fields are redacted before they reach any log sink (payloads
+only log at Debug).
+
+## Container image & deploy
+
+The service ships as a **distroless, statically-linked** container image built with
+[`ko`](https://ko.build) — **no Dockerfile**. ko compiles the binary `CGO_ENABLED=0` and lays it
+on `gcr.io/distroless/static-debian12:nonroot` (no shell, no libc, nonroot) — the binary is the
+entire payload. Builds are **reproducible** (`-trimpath`): the binary embeds no build-machine paths,
+so the same source builds byte-identically in CI and locally (debug symbols are kept).
+
+`.github/workflows/image.yml` builds and publishes the image to **GitHub Container Registry on
+merge to `main`** (and on `v*` tags), repo-namespaced and non-nested:
+
+```
+ghcr.io/<owner>/notesd
+```
+
+Published tags: `latest` (default branch) or the semver version on a `v*` tag, plus `sha-<short>`.
+`gen/` is git-ignored, so the workflow runs `make bootstrap` (generate) before `ko build`. To add
+a second binary later, add a row to the workflow's `matrix.include` with a `-<name>` suffix (e.g.
+`ghcr.io/<owner>/notesd-worker`); `ko build --bare` keeps each image non-nested.
+
+Build the image **locally** (loaded into your Docker daemon, e.g. to run via compose):
+
+```sh
+make image
+```
+
+`make image` installs `ko` on demand and **auto-detects the Docker socket** from your active
+docker context (Docker Desktop, Rancher Desktop, colima, and Linux differ), so it works without
+setting `DOCKER_HOST`. Push instead of loading locally with `KO_DOCKER_REPO=ghcr.io/you/notesd make image`.
+
+Deploy artifacts live under `deploy/` (rendered by `--deploy`):
+
+- **`deploy/k8s/`** — a Flux `HelmRelease` + `OCIRepository` + thin `values.yaml` overlay that
+  points `image.repository` at the published image above. The chart itself is framework-owned and
+  pulled from its registry — you only edit the overlay. See `deploy/k8s/README.md`.
+- **`deploy/compose/`** — a Docker Compose file that references the published image (or a local
+  `ko build` via `${IMAGE}`) and wires the same config env, healthcheck, and graceful-shutdown
+  window as the chart.
+
+## Layout
+
+This service follows the **composable shape** (WS-012): an importable *module* (owns domain
+behavior) and a thin *host* (owns process behavior). The same module runs standalone here or
+composes into a multi-service "suite" binary later — by changing the host, not the module.
+
+```
+proto/notesd/v1/    PUBLIC API (apx-governed) — edit this, then `make generate`
+module/module.go             the IMPORTABLE module unit (domain wiring: repo + health + descriptor)
+module/migrations/           the module's migration files (a host runs them)
+cmd/notesd/main.go      the thin STANDALONE host (process wiring → servicekit.Run)
+cmd/notesd/notesd_smoke_test.go      CRUD round-trip + fail-closed deny
+cmd/notesd/notesd_security_test.go   seccheck security invariants (run in CI)
+gen/                         GENERATED, git-ignored — never edit by hand
+Makefile                     tools / generate / bootstrap / build / test / run
+deploy/                      k8s (Flux) + compose deploy artifacts referencing the image
+.github/workflows/           ci.yml (build/test) + image.yml (ko -> GHCR) + apx-release.yml
+```
+
+## Governing the public API (apx)
+
+The proto under `proto/notesd/v1/` is the **public, apx-governed** contract. Run these gates
+locally before you push — CI runs the same ones:
+
+```sh
+make api-lint       # STANDARD lint of the public proto + the generated OpenAPI surface
+make api-breaking   # compatibility check vs the last committed proto (apx breaking --against HEAD)
+make api-release    # prepare a versioned release (dry-run-equivalent; see note below)
+```
+
+`make api-lint` lints the OpenAPI surface with [`spectral`](https://github.com/stoplightio/spectral).
+apx auto-downloads `buf` and `oasdiff` but not `spectral` (a Node tool), so `make tools` installs it via
+npm. If it is missing, run `npm install -g @stoplight/spectral-cli`.
+
+`make api-breaking` catches an accidental breaking change before it lands. It requires an initialized
+git repo with at least one commit — run `git init && git add . && git commit -m "initial"` first if
+this is a fresh scaffold. After that, with no prior API tag, it passes. Once you've released, compare
+against the released tag instead.
+
+> **Expected, harmless warning.** `make api-release` (and `apx release prepare --dry-run`) prints a
+> **non-fatal `go_package` mismatch** warning — `got "github.com/example/notesd/gen/notesdv1", expected
+> "github.com/example/notesd/proto/notesd/v1"`. This is by design: the generated Go must live in a single
+> directory segment under `gen/` (`gen/notesdv1`) so the sibling generated `ent/` package compiles,
+> which is **not** the `<module>/<api-id>` layout apx derives by default. The command **exits 0** — do
+> not "fix" the `go_package` to silence it (that breaks the build), and do not pass `--strict` (that
+> turns the warning fatal).
+
+See `.github/workflows/apx-release.yml` for the release pipeline.

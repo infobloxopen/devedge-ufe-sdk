@@ -1,0 +1,24 @@
+# Flux HelmRelease: reconciles the framework chart (via the OCIRepository source)
+# with this service's values overlay. This is the ONLY deploy artifact you edit —
+# through deploy/k8s/values.yaml. The chart internals are framework-owned.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: notesd
+  namespace: notesd
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: devedge-service
+      version: "0.1.0"
+      sourceRef:
+        kind: OCIRepository
+        name: notesd-chart
+        namespace: notesd
+  # Values overlay lives beside this file so it stays reviewable in git; Flux
+  # merges deploy/k8s/values.yaml at apply time.
+  valuesFrom:
+    - kind: ConfigMap
+      name: notesd-values
+      valuesKey: values.yaml

@@ -1,0 +1,66 @@
+# Docker Compose deploy for notesd — a local/lightweight runtime wired to the
+# SAME operational surface as the Helm chart: the config.ServerOptions env, a
+# /healthz healthcheck, OTEL_* export, and a stop_grace_period matching the
+# service's graceful shutdown (signal.NotifyContext on SIGTERM).
+#
+# The image is built by ko (no Dockerfile) and published to GHCR by
+# .github/workflows/image.yml. To run a LOCAL build instead of the published image:
+#   IMAGE=$(ko build --local --bare ./cmd/notesd) \
+#     docker compose -f deploy/compose/docker-compose.yml up
+# Otherwise this pulls the published image:
+#   docker compose -f deploy/compose/docker-compose.yml up
+services:
+  notesd:
+    image: ${IMAGE:-ghcr.io/example/notesd:latest}
+    ports:
+      - "9090:9090"   # gRPC
+      - "8080:8080"   # HTTP/JSON gateway
+    environment:
+      # config.ServerOptions env (#93), namespaced by the service's config prefix —
+      # the same names the service main loads via config.Env.
+      NOTESD_GRPC_ADDR: ":9090"
+      NOTESD_HTTP_ADDR: ":8080"
+      NOTESD_LOG_LEVEL: "info"
+      NOTESD_DSN: "postgres://notesd:notesd@postgres:5432/notesd?sslmode=disable"
+      # Observability (#90): point at the collector below to activate export.
+      # Uncomment to send traces/metrics to the otel-collector service.
+      # OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector:4317"
+      # OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+    # Liveness via the HTTP /healthz probe (#91) — the same path the chart uses.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    # Graceful shutdown: matches the chart's terminationGracePeriodSeconds and the
+    # service's SIGTERM drain + OTel flush.
+    stop_grace_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: notesd
+      POSTGRES_PASSWORD: notesd
+      POSTGRES_DB: notesd
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notesd"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Optional collector — uncomment OTEL_EXPORTER_OTLP_ENDPOINT above to use it.
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:latest
+  #   command: ["--config=/etc/otelcol/config.yaml"]
+  #   ports:
+  #     - "4317:4317"   # OTLP gRPC
+  #     - "4318:4318"   # OTLP HTTP
+
+volumes:
+  pgdata:
