@@ -6,8 +6,8 @@
  *  1. `oidc` — a GENERIC OIDC client config consumed by the standalone shell
  *     (see `src/shell/main.ts`). The default `authority` points at a local Dex
  *     issuer; point it at ANY OIDC provider by changing `authority`/`clientId`.
- *     Nothing here is provider-specific — no Okta, no proprietary fields. The
- *     Infoblox/Okta flavor lives in the private devedge-ufe-sdk-internal repo.
+ *     Nothing here is provider-specific — no named provider, no proprietary
+ *     fields. A product-specific flavor binds these values in a private extension.
  *
  *  2. `notesApiBaseUrl` — the base URL of the notesd backend's REST gateway.
  *     The Angular NotesApiService (src/app/notes.service.ts) prefixes every

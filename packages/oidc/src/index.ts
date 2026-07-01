@@ -3,9 +3,10 @@
  *
  * A generic OIDC binding for the core {@link SessionProvider} seam, built on
  * `oidc-client-ts` (authorization-code + PKCE). The issuer is generic (Dex in
- * dev, any OIDC provider in prod) — Okta is intentionally NOT hardwired here.
- * An Infoblox/Okta binding is a separate private package that merely supplies
- * Okta's `authority`/`audience`, mirroring opaauthz → authz.Authorizer.
+ * dev, any OIDC provider in prod) — no identity provider is hardwired here.
+ * A provider-specific binding (e.g. for Okta, Auth0, or Keycloak) is a separate
+ * private package that merely supplies the `authority`/`audience`, the same way
+ * a private authorizer binds to authz.Authorizer.
  */
 import {
   UserManager,

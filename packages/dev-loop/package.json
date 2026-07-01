@@ -1,6 +1,6 @@
 {
   "name": "@infobloxopen/devedge-ufe-dev-loop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Dev-loop diagnostics for devedge micro-frontends: an ordered silent-failure checklist (reachability, TLS, CORS, manifest, nav groups) + import-map override helper + `devedge-ufe doctor` CLI.",
   "license": "Apache-2.0",
   "repository": {

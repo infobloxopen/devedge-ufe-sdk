@@ -1,6 +1,6 @@
 # Minimal deploy manifest for the Notes-ufe uFE static bundle.
-# The BASE scaffold ships this plain Deployment + Service; the FeatureFlag-CRD
-# chart is provided by the internal preset, not here.
+# The BASE scaffold ships this plain Deployment + Service; any product-specific
+# deploy chart comes from a private preset overlay, not here.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

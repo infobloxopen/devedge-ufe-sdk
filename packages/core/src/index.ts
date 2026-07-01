@@ -2,9 +2,10 @@
  * @infobloxopen/devedge-ufe-core
  *
  * The open-core, mechanism-only micro-frontend contract for devedge. Zero
- * runtime dependencies, nothing Infoblox-specific. The seam is public here;
+ * runtime dependencies, nothing product-specific. The seam is public here;
  * proprietary implementations bind on top privately (see the OIDC package for
- * the pattern, mirroring opaauthz → authz.Authorizer in devedge-sdk).
+ * the pattern, the same way a private authorizer binds to authz.Authorizer in
+ * devedge-sdk).
  */
 export type {
   MicrofrontendDescriptor,

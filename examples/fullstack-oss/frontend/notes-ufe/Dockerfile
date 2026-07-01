@@ -1,8 +1,8 @@
 # Generic static-bundle image for the Notes-ufe uFE.
 #
 # Stage 1 builds the UMD bundle; stage 2 serves the static files with a tiny
-# static file server. This is the BASE deploy artifact — it does NOT ship the
-# FeatureFlag-CRD Helm chart (that is the internal preset).
+# static file server. This is the BASE deploy artifact — it does NOT ship any
+# product-specific deploy chart (that comes from a private preset overlay).
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json ./

@@ -6,10 +6,10 @@ on [`devedge-ufe-sdk`](https://github.com/infobloxopen/devedge-ufe-sdk) that
 consumes it.
 
 This is the **open-source flavor**: generic OIDC (any issuer — Dex in dev) and
-Angular Material, with **zero Infoblox-proprietary dependencies**. The
-Infoblox-CTO flavor (PDS design system + Okta) lives in the private
-`Infoblox-CTO/devedge-ufe-sdk-internal` repo and binds on top of these same
-seams, exactly like `opaauthz` binds to `authz.Authorizer` in the backend SDK.
+Angular Material, with **no proprietary dependencies**. A product-specific flavor
+(a private design system + a named OIDC provider) can bind on top of these same
+seams in a separate private extension, the same way a private authorizer binds to
+`authz.Authorizer` in the backend SDK.
 
 ## What you build
 

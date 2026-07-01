@@ -3,9 +3,10 @@
 Generic OIDC (authorization-code + PKCE) binding for the
 [devedge](https://github.com/infobloxopen/devedge-ufe-sdk) `SessionProvider`
 seam, built on [`oidc-client-ts`](https://github.com/authts/oidc-client-ts). The
-issuer is generic (Dex in dev, any OIDC provider in prod) — **Okta is not
-hardwired**; an Infoblox/Okta binding is a separate private package that only
-supplies the `authority`/`audience`.
+issuer is generic (Dex in dev, any OIDC provider in prod) — **no identity
+provider is hardwired**; a provider-specific binding (e.g. for Okta, Auth0, or
+Keycloak) is a separate private package that only supplies the
+`authority`/`audience`.
 
 ## Install
 

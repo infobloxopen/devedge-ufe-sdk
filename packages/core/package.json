@@ -1,6 +1,6 @@
 {
   "name": "@infobloxopen/devedge-ufe-core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Mechanism-only micro-frontend contract for devedge: lifecycle, loud nav-group validation, session seam, and manifest types. Zero runtime dependencies.",
   "license": "Apache-2.0",
   "repository": {
