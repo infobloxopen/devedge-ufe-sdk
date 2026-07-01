@@ -1,0 +1,43 @@
+# The full-stack example's micro-frontend shell topology (WS-018, Method 1).
+#
+# `de project up -f shell.yaml` (from the devedge CLI) renders this into edge
+# routes and brings it up through the same path every other kind uses:
+#
+#   - notesapp.dev.test/            -> the shell dev server (root-config + chrome)
+#   - notesapp.dev.test/api/*       -> the notesd REST gateway (same origin,
+#                                       prefix stripped: /api/v1/notes -> /v1/notes)
+#   - cdn.dev.test/notes/main.js    -> the notes-ufe dev server (prefix stripped:
+#                                       /notes/main.js -> /main.js)
+#
+# The uFE itself is HASH-routed by single-spa in the browser (notesapp.dev.test/#notes),
+# so it needs no edge route of its own — only its CDN asset path does. The shell's
+# <script type="importmap"> (frontend/shell/index.html) maps `notes-ufe` to
+# https://cdn.dev.test/notes/main.js, which is exactly what this topology serves.
+apiVersion: devedge.infoblox.dev/v1alpha1
+kind: Shell
+metadata:
+  name: notesapp
+spec:
+  # The shell FQDN. The browser loads the root-config here; every non-/api path
+  # on this host is served by the shell.
+  host: notesapp.dev.test
+  # Where the shell (root-config + chrome) is served from. In dev this is the
+  # shell's static/dev server; environment.ts's OIDC redirectUri uses :9000.
+  shellUpstream: http://127.0.0.1:9000
+  # The simulated CDN host that serves uFE bundles. Matches the importmap in
+  # frontend/shell/index.html.
+  cdn:
+    host: cdn.dev.test
+  # Method 1: the backend is fronted same-origin under /api. matches the uFE's
+  # notesApiBaseUrl when the SPA and API share an origin behind this ingress.
+  api:
+    method: 1
+    prefix: /api
+    upstream: http://127.0.0.1:8080
+  # The micro-frontends composed into the shell. `id` is the import-map specifier
+  # / single-spa app name; `route` is both the hash route (#notes) and the CDN
+  # path segment (/notes/); `upstream` is the uFE dev server (ng serve, :4200).
+  ufes:
+    - id: notes-ufe
+      route: notes
+      upstream: http://127.0.0.1:4200

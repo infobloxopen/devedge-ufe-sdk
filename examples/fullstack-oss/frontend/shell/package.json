@@ -1,0 +1,11 @@
+{
+  "name": "notes-shell",
+  "version": "0.1.0",
+  "description": "Standalone single-spa root-config (shell) for the full-stack example — native importmap + hash routing (WS-018 Phase D).",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "../notes-ufe/node_modules/.bin/tsc -p tsconfig.json --noEmit"
+  }
+}

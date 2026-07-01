@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notes — devedge uFE shell</title>
+    <!--
+      The single-spa root-config for the full-stack example (WS-018 Phase D).
+
+      uFE bundles load in-browser via the native browser importmap below, from
+      the simulated CDN host. The root-config resolves each bare specifier with
+      a native dynamic import() — NOT SystemJS. Angular's ng-serve emits ESM
+      bundles; native browser importmaps (Chrome/Firefox/Edge/Safari) feed those
+      bare specifiers straight into the browser's ESM loader, whereas the earlier
+      SystemJS path choked on Angular's `import` statements because ng-serve does
+      not emit SystemJS-format bundles.
+
+      The `notes-ufe` entry matches the topology in ../../shell.yaml:
+      cdn.host = cdn.dev.test and the uFE route = notes, so its bundle lives at
+      https://cdn.dev.test/notes/main.js (config.ImportMap() renders the same
+      https://<cdn.host>/<route>/ base). `de project up -f shell.yaml` routes
+      cdn.dev.test/notes/ to the uFE dev server.
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "notes-ufe": "https://cdn.dev.test/notes/main.js"
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --shell-bg: #1b2531;
+        --shell-canvas: #f3f5f7;
+        --shell-accent: #0173e0;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, 'Segoe UI', Roboto, system-ui, sans-serif;
+        background: var(--shell-canvas);
+        color: #2b3440;
+      }
+      header.shell-chrome {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 52px;
+        padding: 0 16px;
+        background: var(--shell-bg);
+        color: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+      }
+      header.shell-chrome .brand {
+        font-weight: 700;
+        font-size: 15px;
+        letter-spacing: 0.2px;
+        margin-right: auto;
+      }
+      header.shell-chrome a {
+        color: #fff;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+      }
+      header.shell-chrome a:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      main#root-application {
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Shell chrome the host owns. uFEs mount into their own single-spa element
+      (single-spa-application:notes-ufe), never into this chrome. The nav link
+      selects the uFE by HASH route (#notes) — single-spa's activeWhen predicate
+      in root-config.ts matches on location.hash, so no full page load happens
+      and no edge route is needed for the uFE surface.
+    -->
+    <header class="shell-chrome">
+      <span class="brand">Notes</span>
+      <a href="#notes">Notes</a>
+    </header>
+    <main id="root-application"></main>
+    <!--
+      The root-config module registers each uFE with single-spa and calls
+      start(). Loaded as a native ES module so its own `import` of the SDK
+      packages and its dynamic import() of uFE bundles resolve through the
+      browser's ESM loader + the importmap above.
+    -->
+    <script type="module" src="./root-config.ts"></script>
+  </body>
+</html>

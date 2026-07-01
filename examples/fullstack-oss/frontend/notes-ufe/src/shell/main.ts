@@ -15,6 +15,12 @@
  *      `await session.getToken()` — proving the shell holds a session before
  *      any uFE mounts — then threads `session` into each uFE as HostProps.
  *
+ * The uFE is selected by HASH route (`#notes`) and loaded via a NATIVE dynamic
+ * import of the bare specifier, resolved by the browser's importmap — NOT
+ * SystemJS, which cannot load Angular's ESM bundle. The runnable root-config in
+ * ../../../shell (its own index.html + native importmap) is the deployable twin
+ * of this file; both share the same hash-routing + native-import model.
+ *
  * This file is not part of the deployed uFE bundle; it documents the contract
  * the host fulfills. See the example README, "How the shell owns the session".
  */
@@ -29,7 +35,34 @@ import {
 } from '@infobloxopen/devedge-ufe-core';
 
 import { environment } from '../environments/environment';
-import notesManifest, { APP_GROUP, APP_PATH } from '../metadata';
+import notesManifest, { APP_GROUP } from '../metadata';
+
+/**
+ * The hash route the notes uFE mounts at (`<host>/#notes`). The runnable shell
+ * lives at ../../../shell (a native-importmap root-config); this file is the
+ * in-src twin that shares the same hash-routing + native-import model.
+ */
+const NOTES_HASH = '#notes';
+
+/**
+ * Builds a single-spa `activeWhen` predicate for a HASH route: the uFE is active
+ * when `location.hash` is exactly the route or a sub-path of it (`#notes`,
+ * `#notes/123`). This is hash routing, not path routing — single-spa reads the
+ * hash, so the uFE surface never reaches the edge.
+ */
+function activeOnHash(route: string): (location: Location) => boolean {
+  return (location: Location) =>
+    location.hash === route || location.hash.startsWith(`${route}/`);
+}
+
+/**
+ * Native dynamic import of a bare specifier, resolved by the browser's importmap
+ * at runtime. Taking `spec` as a parameter (not a string literal) also keeps the
+ * bundler from resolving it at build time, alongside the `webpackIgnore` hint.
+ */
+function loadMfe(spec: string): Promise<SingleSpaLifecycles> {
+  return import(/* webpackIgnore: true */ spec) as Promise<SingleSpaLifecycles>;
+}
 
 /**
  * Boots the shell: owns OIDC, validates the notes uFE's nav, and registers it.
@@ -46,10 +79,12 @@ export async function bootShell(): Promise<void> {
     scope: environment.oidc.scope,
   });
 
-  // Complete the auth-code / silent-renew redirects on their routes.
+  // Complete the auth-code / silent-renew redirects on their dedicated paths.
+  // These are OIDC redirect endpoints (path-based) and are independent of the
+  // uFE HASH routing below.
   if (location.pathname === '/callback') {
     await session.completeLoginRedirect();
-    history.replaceState(null, '', APP_PATH);
+    history.replaceState(null, '', `/${NOTES_HASH}`);
   } else if (location.pathname === '/silent-refresh') {
     await session.completeSilentRedirect();
     return;
@@ -67,16 +102,17 @@ export async function bootShell(): Promise<void> {
     apps: [
       {
         name: 'notes-ufe',
-        activeWhen: APP_PATH,
-        // The uFE's single-spa lifecycles. In a real shell these are loaded
-        // from the deployed bundle via SystemJS (`System.import('notes-ufe')`);
-        // in dev, the import-map override points that id at the local dev
-        // server (see the README). We load through the host's SystemJS so the
-        // uFE bundle is fetched at runtime, not resolved at build time.
-        load: () =>
-          (globalThis as unknown as {
-            System: { import(id: string): Promise<SingleSpaLifecycles> };
-          }).System.import('notes-ufe'),
+        // HASH routing: the uFE mounts when the URL hash is #notes (or a
+        // sub-path). NOT path routing.
+        activeWhen: activeOnHash(NOTES_HASH),
+        // Load the uFE's single-spa lifecycles via a NATIVE dynamic import of
+        // the bare specifier. The browser's <script type="importmap"> resolves
+        // `notes-ufe` to the CDN bundle (https://cdn.dev.test/notes/main.js in
+        // this example), and `import(/* webpackIgnore: true *​/ …)` keeps
+        // webpack from bundling the specifier so the fetch happens at runtime.
+        // This replaces the earlier `System.import`, which could not load
+        // Angular's ESM bundle (ng-serve emits ESM, not SystemJS format).
+        load: () => loadMfe('notes-ufe'),
       },
     ],
   });

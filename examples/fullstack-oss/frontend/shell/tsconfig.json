@@ -1,0 +1,30 @@
+{
+  "//": "Type-checks the standalone shell (root-config.ts). The shell is not an Angular app, so this is a plain tsconfig — no angularCompilerOptions. It reuses the strict compiler options from the uFE's base config, and maps the @infobloxopen/* + single-spa specifiers to the packages installed under ../notes-ufe/node_modules (the example installs there via `pnpm install --ignore-workspace`). Run: `pnpm run typecheck` from this dir, or `tsc -p tsconfig.json --noEmit`.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "dom"],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "single-spa": ["../notes-ufe/node_modules/single-spa"],
+      "@infobloxopen/devedge-ufe-core": [
+        "../notes-ufe/node_modules/@infobloxopen/devedge-ufe-core"
+      ],
+      "@infobloxopen/devedge-ufe-oidc": [
+        "../notes-ufe/node_modules/@infobloxopen/devedge-ufe-oidc"
+      ],
+      "@infobloxopen/devedge-ufe-single-spa": [
+        "../notes-ufe/node_modules/@infobloxopen/devedge-ufe-single-spa"
+      ]
+    }
+  },
+  "include": ["root-config.ts", "../notes-ufe/src/metadata.ts", "../notes-ufe/src/environments/environment.ts"]
+}
