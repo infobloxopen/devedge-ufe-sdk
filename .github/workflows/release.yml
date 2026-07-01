@@ -1,25 +1,25 @@
 name: Release
 
-# Publishes every SDK package to npm when a version tag (v*) is pushed.
-#
-# Inert until an NPM_TOKEN secret is configured: without it the publish step
-# authenticates with an empty token and fails, so the workflow has no effect
-# on repositories that have not opted in.
+# Publishes every SDK package to GitHub Packages (npm.pkg.github.com) on a
+# version tag (v*) or manual dispatch. Uses the built-in GITHUB_TOKEN with
+# packages:write — NO external secret required.
 #
 # pnpm rewrites each package's `workspace:*` cross-dependency to the real
-# published version at publish time, so the on-npm packages depend on concrete
-# versions rather than the workspace protocol.
+# published version at publish time.
+#
+# Consumers install these scoped packages with an .npmrc:
+#   @infobloxopen:registry=https://npm.pkg.github.com
+#   //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}   # any token with read:packages
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: read
-  # Required for npm provenance (--provenance is enabled automatically by npm
-  # when id-token: write is present and the package is published from CI).
-  id-token: write
+  packages: write
 
 jobs:
   publish:
@@ -28,14 +28,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        # No explicit version — pnpm/action-setup reads `packageManager`.
         uses: pnpm/action-setup@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
+
+      - name: Configure GitHub Packages auth
+        run: |
+          {
+            echo "@infobloxopen:registry=https://npm.pkg.github.com"
+            echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}"
+          } >> .npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -43,7 +50,7 @@ jobs:
       - name: Build packages
         run: pnpm -r --filter './packages/*' run build
 
-      - name: Publish to npm
-        run: pnpm -r --filter './packages/*' publish --access public --no-git-checks
+      - name: Publish to GitHub Packages
+        run: pnpm -r --filter './packages/*' publish --no-git-checks
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
