@@ -25,7 +25,13 @@ export {
   assertNavContributions,
 } from './nav.js';
 
-export type { Claims, SessionEvent, SessionProvider, AuthEventBus } from './session.js';
+export type {
+  Claims,
+  SessionEvent,
+  SessionProvider,
+  AuthEventBus,
+  AuthedFetchOptions,
+} from './session.js';
 export { createAuthEventBus, createAuthedFetch, StubSessionProvider } from './session.js';
 
 export type { UfeExport, UfeManifest, DeployableArtifact } from './manifest.js';

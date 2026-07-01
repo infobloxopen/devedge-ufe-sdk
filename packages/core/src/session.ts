@@ -86,34 +86,100 @@ export function createAuthEventBus(): AuthEventBus {
   return host[BUS_KEY]!;
 }
 
+/** Options for {@link createAuthedFetch}. */
+export interface AuthedFetchOptions {
+  /**
+   * Extra origins (beyond `location.origin`) that MAY receive the bearer
+   * token. Each entry is compared against the request's resolved origin.
+   */
+  allowedOrigins?: string[];
+}
+
+/**
+ * Resolves `input` to a request URL string, matching `fetch`'s own coercion:
+ * a `Request` uses its `.url`; anything else is stringified.
+ */
+function urlFromInput(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.toString();
+  // A Request (or Request-like) object.
+  return (input as { url: string }).url;
+}
+
+/**
+ * Decides whether the bearer token may be attached to a request bound for
+ * `resolvedUrl`. Same-origin (which includes relative URLs, since they resolve
+ * to the page origin) is always allowed; cross-origin requires an explicit
+ * allowlist match. In a non-browser host (no `location`) only an explicit
+ * allowlist match qualifies.
+ */
+function mayAttachToken(urlStr: string, allowedOrigins: string[]): boolean {
+  const pageOrigin = typeof location !== 'undefined' ? location.origin : undefined;
+  let target: URL;
+  try {
+    target = new URL(urlStr, pageOrigin);
+  } catch {
+    // Unparseable target: fail closed — do not attach the token.
+    return false;
+  }
+  if (pageOrigin !== undefined && target.origin === pageOrigin) return true;
+  return allowedOrigins.includes(target.origin);
+}
+
 /**
  * Wraps `fetch` so requests carry `Authorization: Bearer <token>` from the
  * session. On a 401 it calls `session.login()` then retries the request ONCE;
  * if that retry also 401s it returns the response. Any other status passes
  * through unchanged.
+ *
+ * @remarks
+ * Same-origin by default: the token is attached ONLY when the request's
+ * resolved origin equals the page origin (`location.origin`) — relative URLs
+ * resolve to the page origin and are therefore safe — or is listed in
+ * `opts.allowedOrigins`. This prevents leaking the bearer token to third-party
+ * origins. In a non-browser host (no `location`) the token is attached only
+ * when an explicit allowlist matches.
  */
 export function createAuthedFetch(
   session: SessionProvider,
   base: typeof fetch = fetch,
+  opts?: AuthedFetchOptions,
 ): typeof fetch {
+  const allowedOrigins = opts?.allowedOrigins ?? [];
   const authed = async (
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
-    const withBearer = async (): Promise<Response> => {
+    const attach = mayAttachToken(urlFromInput(input), allowedOrigins);
+
+    // Capture the request in a re-constructable form so a 401 retry does not
+    // reuse an already-consumed body. A Request body is single-use, so we
+    // clone it up front and rebuild a fresh Request for each send.
+    const template = input instanceof Request ? input : undefined;
+
+    const send = async (): Promise<Response> => {
+      if (!attach) {
+        return template ? base(template.clone()) : base(input, init);
+      }
       const token = await session.getToken();
+      if (template) {
+        const req = template.clone();
+        const headers = new Headers(req.headers);
+        headers.set('Authorization', `Bearer ${token}`);
+        return base(new Request(req, { headers }));
+      }
       const headers = new Headers(init?.headers);
       headers.set('Authorization', `Bearer ${token}`);
       return base(input, { ...init, headers });
     };
 
-    const res = await withBearer();
+    const res = await send();
     if (res.status !== 401) {
       return res;
     }
     // 401 → re-authenticate and retry exactly once.
     await session.login();
-    return withBearer();
+    return send();
   };
   return authed as typeof fetch;
 }
@@ -121,7 +187,13 @@ export function createAuthedFetch(
 /**
  * A no-real-auth session for local development and tests. Returns a fixed
  * token, publishes a `token_acquired` on the shared bus, and no-ops on
- * login/logout. Never use in production.
+ * login/logout.
+ *
+ * @remarks
+ * DEVELOPMENT ONLY. This provider performs NO authentication and MUST NOT be
+ * used in production. Constructing it emits a `console.warn` so an accidental
+ * production bundle surfaces the misuse loudly (it stays functional and does
+ * not throw).
  */
 export class StubSessionProvider implements SessionProvider {
   private readonly token: string;
@@ -129,6 +201,9 @@ export class StubSessionProvider implements SessionProvider {
   private readonly bus: AuthEventBus;
 
   constructor(opts: { token?: string; claims?: Claims | null } = {}) {
+    console.warn(
+      '[devedge-ufe] StubSessionProvider is for development only and must not be used in production.',
+    );
     this.token = opts.token ?? 'dev-stub-token';
     this.claims = opts.claims ?? { sub: 'dev-user' };
     this.bus = createAuthEventBus();

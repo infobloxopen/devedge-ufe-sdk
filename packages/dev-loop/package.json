@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Dev-loop diagnostics for devedge micro-frontends: an ordered silent-failure checklist (reachability, TLS, CORS, manifest, nav groups) + import-map override helper + `devedge-ufe doctor` CLI.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infobloxopen/devedge-ufe-sdk.git",
+    "directory": "packages/dev-loop"
+  },
+  "homepage": "https://github.com/infobloxopen/devedge-ufe-sdk/tree/main/packages/dev-loop#readme",
+  "bugs": {
+    "url": "https://github.com/infobloxopen/devedge-ufe-sdk/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -16,7 +25,9 @@
   "bin": {
     "devedge-ufe": "./dist/cli.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -32,7 +43,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
+    "vitest": "^3.2.6",
     "jsdom": "^24.0.0"
   }
 }

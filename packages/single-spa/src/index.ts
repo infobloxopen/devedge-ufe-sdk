@@ -71,6 +71,10 @@ export interface Shell {
  * any uFE mounts — then registers each app with `session` (plus any
  * `customProps`) as a single-spa custom prop. Child uFEs therefore only ever
  * receive the read-only SessionProvider view; they never authenticate.
+ *
+ * The shell-owned `session` is applied AFTER any caller `customProps`, so a
+ * caller can never override the shell session — the shell-owns-session
+ * invariant holds even against a `customProps.session` (accidental or not).
  */
 export function createShell(opts: ShellOptions): Shell {
   return {
@@ -85,7 +89,8 @@ export function createShell(opts: ShellOptions): Shell {
             return l as LifeCycles<HostProps>;
           },
           activeWhen: app.activeWhen,
-          customProps: { session: opts.session, ...opts.customProps },
+          // session LAST so caller customProps cannot override it.
+          customProps: { ...opts.customProps, session: opts.session },
         });
       }
     },

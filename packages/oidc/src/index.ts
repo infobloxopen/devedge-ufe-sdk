@@ -7,7 +7,12 @@
  * An Infoblox/Okta binding is a separate private package that merely supplies
  * Okta's `authority`/`audience`, mirroring opaauthz → authz.Authorizer.
  */
-import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
+import {
+  UserManager,
+  WebStorageStateStore,
+  InMemoryWebStorage,
+  type User,
+} from 'oidc-client-ts';
 import {
   createAuthEventBus,
   type AuthEventBus,
@@ -24,6 +29,21 @@ export interface OidcConfig {
   silentRedirectUri?: string;
   scope?: string;
   audience?: string;
+  /**
+   * Where OIDC state (including tokens) is persisted.
+   *
+   * - `'localStorage'` (default): survives full-page reloads and is shared
+   *   across tabs, but is readable by any script on the origin — an XSS
+   *   payload can exfiltrate the token. This preserves the historical
+   *   behavior.
+   * - `'memory'`: keeps tokens in a per-page in-memory store. It is not
+   *   reachable by unrelated script contexts and is cleared on reload, which
+   *   narrows the XSS blast radius at the cost of re-authenticating after a
+   *   hard reload.
+   *
+   * See the package README for the full tradeoff.
+   */
+  stateStore?: 'localStorage' | 'memory';
 }
 
 const DEFAULT_SCOPE = 'openid profile email offline_access';
@@ -41,9 +61,16 @@ const REFRESH_SKEW_SECONDS = 30;
 export class OidcSessionProvider implements SessionProvider {
   private readonly mgr: UserManager;
   private readonly bus: AuthEventBus;
+  /**
+   * The in-flight silent-refresh promise, shared by concurrent `getToken`
+   * callers so only ONE `signinSilent` runs at a time. Cleared when it settles.
+   */
+  private refreshInFlight: Promise<User | null> | null = null;
 
   constructor(config: OidcConfig, bus: AuthEventBus = createAuthEventBus()) {
     this.bus = bus;
+    const store =
+      config.stateStore === 'memory' ? new InMemoryWebStorage() : localStorage;
     this.mgr = new UserManager({
       authority: config.authority,
       client_id: config.clientId,
@@ -55,7 +82,7 @@ export class OidcSessionProvider implements SessionProvider {
       automaticSilentRenew: true,
       loadUserInfo: false,
       monitorSession: false,
-      userStore: new WebStorageStateStore({ store: localStorage }),
+      userStore: new WebStorageStateStore({ store }),
     });
 
     this.mgr.events.addUserLoaded((user: User) => {
@@ -82,8 +109,17 @@ export class OidcSessionProvider implements SessionProvider {
     if (user && this.isFresh(user)) {
       return user.access_token;
     }
+    // Concurrent callers share ONE silent refresh: the first starts it, the
+    // rest await the same promise. Cleared on settle so the next expiry can
+    // trigger a fresh refresh.
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.mgr.signinSilent().catch(() => null);
+      this.refreshInFlight.finally(() => {
+        this.refreshInFlight = null;
+      });
+    }
     try {
-      user = await this.mgr.signinSilent();
+      user = await this.refreshInFlight;
     } catch {
       user = null;
     }

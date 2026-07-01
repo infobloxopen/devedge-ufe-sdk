@@ -1,0 +1,49 @@
+name: Release
+
+# Publishes every SDK package to npm when a version tag (v*) is pushed.
+#
+# Inert until an NPM_TOKEN secret is configured: without it the publish step
+# authenticates with an empty token and fails, so the workflow has no effect
+# on repositories that have not opted in.
+#
+# pnpm rewrites each package's `workspace:*` cross-dependency to the real
+# published version at publish time, so the on-npm packages depend on concrete
+# versions rather than the workspace protocol.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  # Required for npm provenance (--provenance is enabled automatically by npm
+  # when id-token: write is present and the package is published from CI).
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        # No explicit version — pnpm/action-setup reads `packageManager`.
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm -r --filter './packages/*' run build
+
+      - name: Publish to npm
+        run: pnpm -r --filter './packages/*' publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

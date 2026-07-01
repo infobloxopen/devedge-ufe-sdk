@@ -6,7 +6,10 @@ const handlers: Record<string, (arg?: unknown) => void> = {};
 
 vi.mock('oidc-client-ts', () => {
   class WebStorageStateStore {
-    constructor(public opts: unknown) {}
+    constructor(public opts: { store?: unknown }) {}
+  }
+  class InMemoryWebStorage {
+    __inMemory = true;
   }
   class UserManager {
     events = {
@@ -22,7 +25,7 @@ vi.mock('oidc-client-ts', () => {
     signinRedirect = vi.fn(async () => {});
     signoutRedirect = vi.fn(async () => {});
   }
-  return { UserManager, WebStorageStateStore };
+  return { UserManager, WebStorageStateStore, InMemoryWebStorage };
 });
 
 import { OidcSessionProvider, type OidcConfig } from './index.js';
@@ -80,5 +83,48 @@ describe('republishes UserManager events onto the core bus', () => {
       { type: 'token_expired' },
       { type: 'signed_out' },
     ]);
+  });
+});
+
+describe('state store selection (XSS tradeoff)', () => {
+  it("defaults to localStorage (browser store, not the in-memory store)", () => {
+    new OidcSessionProvider(cfg);
+    const store = (captured.settings!.userStore as { opts: { store?: unknown } }).opts.store;
+    expect((store as { __inMemory?: boolean })?.__inMemory).toBeUndefined();
+  });
+
+  it("uses the in-memory store when stateStore: 'memory'", () => {
+    new OidcSessionProvider({ ...cfg, stateStore: 'memory' });
+    const store = (captured.settings!.userStore as { opts: { store?: unknown } }).opts.store;
+    expect((store as { __inMemory?: boolean }).__inMemory).toBe(true);
+  });
+});
+
+describe('getToken concurrency (in-flight dedup)', () => {
+  it('shares ONE signinSilent across concurrent getToken() callers', async () => {
+    const sp = new OidcSessionProvider(cfg);
+    const mgr = (sp as unknown as { mgr: Record<string, ReturnType<typeof vi.fn>> }).mgr;
+
+    // No cached user; a slow silent refresh yields a fresh token.
+    let resolveSilent: (u: unknown) => void = () => {};
+    mgr.getUser.mockResolvedValue(null);
+    mgr.signinSilent.mockImplementation(
+      () => new Promise((r) => (resolveSilent = r)),
+    );
+
+    const p1 = sp.getToken();
+    const p2 = sp.getToken();
+    // Flush microtasks so both callers get past `await getUser()` and reach the
+    // shared-promise branch before the single silent refresh resolves.
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    resolveSilent({ access_token: 'fresh', expires_at: null });
+
+    await Promise.all([p1, p2]);
+    expect(mgr.signinSilent).toHaveBeenCalledTimes(1);
+
+    // After settle, a later call is free to refresh again (fresh in-flight).
+    mgr.signinSilent.mockResolvedValue({ access_token: 'fresh2', expires_at: null });
+    await sp.getToken();
+    expect(mgr.signinSilent).toHaveBeenCalledTimes(2);
   });
 });

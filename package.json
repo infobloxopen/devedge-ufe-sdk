@@ -13,5 +13,12 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@10.2.1"
+  "packageManager": "pnpm@10.2.1",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"],
+    "overrides": {
+      "vite": "^7.1.12",
+      "esbuild": "^0.25.0"
+    }
+  }
 }
