@@ -27,6 +27,7 @@
     "@infobloxopen/devedge-ufe-single-spa": "file:../../../../packages/single-spa",
     "@infobloxopen/devedge-ufe-oidc": "file:../../../../packages/oidc",
     "@infobloxopen/devedge-ufe-dev-loop": "file:../../../../packages/dev-loop",
+    "@example/notesd-client": "file:../../clients/notesd-client",
     "single-spa": "^6.0.0",
     "single-spa-angular": "^8.0.0",
     "systemjs-webpack-interop": "^2.3.7",

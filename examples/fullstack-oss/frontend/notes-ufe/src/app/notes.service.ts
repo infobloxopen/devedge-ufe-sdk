@@ -1,59 +1,68 @@
 /**
- * NotesApiService — the Angular client for the notesd backend's REST gateway.
+ * NotesApiService — a thin Angular facade over the GENERATED notesd client
+ * (`@example/notesd-client`, produced by `apx client generate` from the backend
+ * OpenAPI spec). This service NO LONGER hand-writes the REST calls or the
+ * `Note`/`ListNotesResponse` types — it delegates to the generated functional
+ * operations and re-exports the generated models.
  *
- * It calls the JSON/REST surface the devedge-sdk service exposes (the gRPC
- * gateway). Every request goes through Angular's HttpClient, which is
+ * Auth is unchanged and still out-of-band: the generated operations take
+ * Angular's `HttpClient` (we pass the injected one), and that HttpClient is
  * registered in AppModule WITH the open-core `bearerAuthInterceptor`
- * (`@infobloxopen/devedge-ufe-angular`). That interceptor reads the token from
- * the shell-owned SessionProvider and attaches `Authorization: Bearer <token>`
- * — this service therefore contains ZERO auth code. The shell owns the session;
- * this uFE just consumes it.
+ * (`@infobloxopen/devedge-ufe-angular`). Because the generated client rides the
+ * SAME HttpClient, the interceptor attaches `Authorization: Bearer <token>` to
+ * every generated request automatically — this service still contains ZERO auth
+ * code. The shell owns the session; this uFE just consumes it.
  *
- * The REST shape is exactly what `devedge-sdk new service notesd --resource
- * Note` generates (see backend/openapi/notesd.openapi.yaml). NOTE: the SDK's
- * default Note carries `displayName` + `description` (AIP-standard fields), not
- * `title`/`body`. The gateway serializes fields as camelCase JSON.
- *   - List:   GET  {base}/v1/notes  -> { notes: Note[], nextPageToken }
- *   - Create: POST {base}/v1/notes  (body: the Note)
+ * Base URL: the generated `ApiConfiguration.rootUrl` is set from
+ * `environment.notesApiBaseUrl` via the generated `provideApiConfiguration`
+ * helper (see AppModule). The generated operation paths (e.g. `/v1/notes`) are
+ * appended to it.
+ *
+ * The generated surface (see clients/notesd-client):
+ *   - noteServiceListNotes(http, rootUrl, params?) -> V1ListNotesResponse
+ *   - noteServiceCreateNote(http, rootUrl, { body }) -> V1Note
  * A Note's `name` is the server-assigned resource name (e.g. "notes/abc123").
  */
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { map, type Observable } from 'rxjs';
 
-import { environment } from '../environments/environment';
+import {
+  ApiConfiguration,
+  noteServiceListNotes,
+  noteServiceCreateNote,
+  type V1Note,
+  type V1ListNotesResponse,
+} from '@example/notesd-client';
 
-/** A Note resource as returned by the notesd REST gateway (camelCase JSON). */
-export interface Note {
-  /** AIP-122 resource name, server-assigned (e.g. "notes/abc123"). */
-  name?: string;
-  id?: string;
-  displayName: string;
-  description: string;
-  /** Concurrency token; server-assigned. */
-  etag?: string;
-}
-
-/** The List response envelope (AIP-158 pagination). */
-interface ListNotesResponse {
-  notes?: Note[];
-  nextPageToken?: string;
-}
+/**
+ * Re-export the generated models under the names the rest of the uFE already
+ * uses. `Note` is the generated `V1Note`; components import `Note` from here so
+ * they stay decoupled from the generated symbol names.
+ */
+export type Note = V1Note;
+export type ListNotesResponse = V1ListNotesResponse;
 
 @Injectable({ providedIn: 'root' })
 export class NotesApiService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.notesApiBaseUrl}/v1/notes`;
+  private readonly config = inject(ApiConfiguration);
+
+  private get rootUrl(): string {
+    return this.config.rootUrl;
+  }
 
   /** Lists the caller's tenant-scoped Notes. */
   list(): Observable<Note[]> {
-    return this.http
-      .get<ListNotesResponse>(this.base)
-      .pipe(map((res) => res.notes ?? []));
+    return noteServiceListNotes(this.http, this.rootUrl).pipe(
+      map((res: HttpResponse<V1ListNotesResponse>) => res.body?.notes ?? []),
+    );
   }
 
   /** Creates a Note. The Bearer token is attached by the interceptor. */
   create(note: Pick<Note, 'displayName' | 'description'>): Observable<Note> {
-    return this.http.post<Note>(this.base, note);
+    return noteServiceCreateNote(this.http, this.rootUrl, { body: note }).pipe(
+      map((res: HttpResponse<V1Note>) => res.body as V1Note),
+    );
   }
 }
