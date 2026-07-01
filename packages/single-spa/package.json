@@ -1,6 +1,6 @@
 {
   "name": "@infobloxopen/devedge-ufe-single-spa",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "single-spa adapter for the devedge-ufe lifecycle contract, plus the shell-owns-session registration mechanism.",
   "license": "Apache-2.0",
   "repository": {

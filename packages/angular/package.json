@@ -1,6 +1,6 @@
 {
   "name": "@infobloxopen/devedge-ufe-angular",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Angular glue (plain TS) for the devedge-ufe SessionProvider seam: InjectionToken, provider fn, and functional bearer interceptor. Angular 15..latest.",
   "license": "Apache-2.0",
   "repository": {
