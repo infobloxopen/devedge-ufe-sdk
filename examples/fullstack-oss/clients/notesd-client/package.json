@@ -1,0 +1,40 @@
+{
+  "name": "@example/notesd-client",
+  "version": "0.1.0",
+  "description": "Generated TypeScript/Angular API client for @example/notesd-client.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@angular/common": "\u003e=15",
+    "@angular/core": "\u003e=15",
+    "rxjs": "\u003e=7"
+  },
+  "devDependencies": {
+    "@angular/common": "^15.2.10",
+    "@angular/core": "^15.2.10",
+    "rxjs": "^7.8.0",
+    "typescript": "^5.4.0",
+    "zone.js": "~0.13.3"
+  }
+}
