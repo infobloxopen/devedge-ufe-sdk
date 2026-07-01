@@ -58,6 +58,28 @@ subscribe to auth events, and request login/logout, but they cannot construct a
 session or reach the identity provider. `createShell` enforces this by gating
 registration on `await session.getToken()` before any uFE mounts.
 
+## Getting started
+
+The fastest path to a working micro-frontend is to scaffold one with the devedge
+CLI:
+
+```bash
+de ufe new my-ufe
+```
+
+`de ufe new` generates an Angular + single-spa micro-frontend already wired to
+these packages — a validated nav contribution, a session-aware shell, and the
+bearer interceptor. It ships in the
+[`devedge`](https://github.com/infobloxopen/devedge) CLI, the same tool that
+scaffolds backend services with `de new service`.
+
+For a complete backend-and-frontend example — a
+[`devedge-sdk`](https://github.com/infobloxopen/devedge-sdk) service and an
+Angular micro-frontend that consumes it, with the session and REST seam wired end
+to end — see [`examples/fullstack-oss`](examples/fullstack-oss).
+
+To wire a micro-frontend by hand instead, follow the quickstart below.
+
 ## Quickstart
 
 ### Shell (owns the session, gates registration, validates nav)
