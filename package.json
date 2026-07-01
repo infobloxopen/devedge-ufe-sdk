@@ -1,0 +1,17 @@
+{
+  "name": "@infobloxopen/devedge-ufe-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open-core, mechanism-only micro-frontend SDK for devedge — the frontend mirror of devedge-sdk.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --filter './packages/*' run build",
+    "test": "pnpm -r --filter './packages/*' run test",
+    "typecheck": "pnpm -r --filter './packages/*' run typecheck"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.2.1"
+}
