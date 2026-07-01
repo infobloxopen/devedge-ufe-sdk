@@ -77,9 +77,9 @@ pnpm build                 # UMD bundle → dist/notes-ufe/
 
 The base scaffold ships a generic static-bundle `Dockerfile`, a minimal
 `deploy/manifest.yaml`, and a `charts/notes-ufe-ufe/` Helm chart. It does
-**not** ship the FeatureFlag-CRD chart — that is provided by the `infoblox-cto`
-preset (`de ufe new notes-ufe --preset infoblox-cto`), which lives in the
-private `Infoblox-CTO/devedge-ufe-sdk-internal` repo.
+**not** ship any product-specific deploy artifact (such as a custom CRD chart) —
+those are supplied by a private preset overlay (`de ufe new notes-ufe --preset
+<name>`), kept in a separate private extension.
 
 ## Layout
 

@@ -1,9 +1,9 @@
 /**
  * A tiny standalone SHELL for the full-stack example.
  *
- * In production a real host (e.g. Infoblox's shell) owns this. It is included
+ * In production a real host (the product's shell) owns this. It is included
  * here so the example is coherent end-to-end: it shows exactly where the
- * shell-owns-session boundary lives, mirroring the unified-dashboard POC.
+ * shell-owns-session boundary lives.
  *
  * What the shell does — and what a uFE MUST NOT do:
  *   1. Instantiates the OidcSessionProvider ONCE (generic OIDC; issuer is Dex

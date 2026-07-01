@@ -3,7 +3,7 @@
 Mechanism-only micro-frontend contract for [devedge](https://github.com/infobloxopen/devedge-ufe-sdk):
 lifecycle types, **loud** nav-group validation, the read-only `SessionProvider`
 session seam plus framework-agnostic auth primitives, and manifest types. Zero
-runtime dependencies, nothing Infoblox-specific.
+runtime dependencies, nothing product-specific.
 
 ## Install
 

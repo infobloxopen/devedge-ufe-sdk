@@ -2,36 +2,39 @@
 
 The open-core, mechanism-only micro-frontend SDK for devedge — the **frontend
 mirror of [`devedge-sdk`](https://github.com/infobloxopen/devedge-sdk)**. It is
-small, public, and carries **zero Infoblox-proprietary dependencies**.
+small, public, and carries **no proprietary dependencies**.
 
 ## The seam is public; the proprietary implementation binds on top privately
 
 This repo follows the same governance principle as `devedge-sdk`: **the seam is
-public; the proprietary implementation is an internal binding.** In `devedge-sdk`
-the authorization *seam* is `authz.Authorizer` and the Infoblox OPA
-implementation (`opaauthz`) binds to it from a private package. Nothing about
-OPA leaks into the public seam.
+public; any product-specific implementation is a private binding.** In
+`devedge-sdk` the authorization *seam* is the public `authz.Authorizer`
+interface; a concrete decision point — say, an OPA-backed authorizer — binds to
+it from a separate private package, and nothing about that engine leaks into the
+public seam.
 
 The frontend SDK works the same way. Everything here is **mechanism, not
 policy**:
 
 - The **session seam** is `SessionProvider`. The generic OIDC binding
-  (auth-code + PKCE) is public because OIDC is a standard; an *Infoblox/Okta*
-  binding that merely supplies Okta's `authority`/`audience` is a separate
-  **private** package. Okta is never named here.
+  (auth-code + PKCE) is public because OIDC is a standard; a provider-specific
+  binding (e.g. for Okta, Auth0, or Keycloak) that merely supplies the
+  `authority`/`audience` is a separate **private** package. No identity provider
+  is named or hardwired here.
 - The **nav seam** is `NavContribution` + `GroupRegistry`. The *set of valid
   groups* (a product taxonomy) is host-supplied and never hardcoded here.
 - The **lifecycle seam** is `MicrofrontendModule`. The single-spa/Angular
   adapters are thin; a shell composes them.
 
-Nothing Infoblox-specific lives in this repository — no Okta, no `@infoblox-cto/*`,
-no root-ui, no FeatureFlag CRD, no nav-taxonomy values. Those bind on top,
-privately, exactly like `opaauthz → authz.Authorizer`.
+Nothing product-specific lives in this repository — no identity-provider names,
+no design system, no deployment CRDs, no nav-taxonomy values. Those bind on top,
+privately, in a separate extension — the same way a private authorizer binds to
+`authz.Authorizer` in `devedge-sdk`.
 
 ## Why this exists
 
-A hands-on bootstrap of a real Infoblox uFE surfaced ten friction findings. The
-worst was a **silent failure**: a nav item's `group` field was free text
+A hands-on bootstrap of a real micro-frontend surfaced ten friction findings.
+The worst was a **silent failure**: a nav item's `group` field was free text
 validated against nothing, so a wrong value rendered **nothing**, with no error
 anywhere. This SDK's job is to turn silent failures into **loud, mechanism-level
 guarantees**.
@@ -152,8 +155,9 @@ override('widgets', 'https://localhost:4200/widgets.js'); // import-map override
 9. **Manifest shape drift** — `defineManifest` validates the manifest at
    import/build time instead of failing at runtime.
 10. **Proprietary lock-in** — none. Every seam is a standard mechanism;
-    Infoblox-specific bindings (Okta authority, product nav taxonomy) live in
-    separate private packages, exactly like `opaauthz → authz.Authorizer`.
+    product-specific bindings (a provider's OIDC authority, a product nav
+    taxonomy) live in separate private packages, the same way a private
+    authorizer binds to `authz.Authorizer` in `devedge-sdk`.
 
 ## Development
 
