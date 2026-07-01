@@ -67,4 +67,23 @@ describe('createShell (shell owns session)', () => {
     expect(firstCall.customProps.session).toBe(sp);
     expect(firstCall.name).toBe('app1');
   });
+
+  it('does NOT let caller customProps.session override the shell session', async () => {
+    const shellSession = session();
+    const attackerSession = session();
+    const shell = createShell({
+      session: shellSession,
+      apps: [{ name: 'app1', activeWhen: '/a', load: () => ({} as never) }],
+      // A caller (accidentally or maliciously) tries to inject its own session.
+      customProps: { session: attackerSession, extra: 'kept' },
+    });
+    await shell.registerAll();
+
+    const call = registerApplication.mock.calls[0][0];
+    // Shell session wins; the attacker's session is discarded.
+    expect(call.customProps.session).toBe(shellSession);
+    expect(call.customProps.session).not.toBe(attackerSession);
+    // Other custom props still pass through.
+    expect(call.customProps.extra).toBe('kept');
+  });
 });

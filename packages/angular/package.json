@@ -1,8 +1,17 @@
 {
   "name": "@infobloxopen/devedge-ufe-angular",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Angular glue (plain TS) for the devedge-ufe SessionProvider seam: InjectionToken, provider fn, and functional bearer interceptor. Angular 15..latest.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infobloxopen/devedge-ufe-sdk.git",
+    "directory": "packages/angular"
+  },
+  "homepage": "https://github.com/infobloxopen/devedge-ufe-sdk/tree/main/packages/angular#readme",
+  "bugs": {
+    "url": "https://github.com/infobloxopen/devedge-ufe-sdk/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -13,7 +22,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
@@ -32,12 +43,13 @@
     "@infobloxopen/devedge-ufe-core": "workspace:*"
   },
   "devDependencies": {
-    "@angular/core": ">=15",
-    "@angular/common": ">=15",
+    "@angular/core": "^15.2.10",
+    "@angular/common": "^15.2.10",
+    "@angular/compiler": "^15.2.10",
     "rxjs": "^7.8.0",
-    "zone.js": "^0.15.0",
+    "zone.js": "~0.13.3",
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
+    "vitest": "^3.2.6",
     "jsdom": "^24.0.0"
   }
 }

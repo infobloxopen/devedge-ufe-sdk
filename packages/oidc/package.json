@@ -1,8 +1,17 @@
 {
   "name": "@infobloxopen/devedge-ufe-oidc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generic OIDC (authorization-code + PKCE) binding for the devedge-ufe SessionProvider seam. Provider-agnostic; no Okta.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infobloxopen/devedge-ufe-sdk.git",
+    "directory": "packages/oidc"
+  },
+  "homepage": "https://github.com/infobloxopen/devedge-ufe-sdk/tree/main/packages/oidc#readme",
+  "bugs": {
+    "url": "https://github.com/infobloxopen/devedge-ufe-sdk/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -13,7 +22,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
@@ -29,7 +40,7 @@
   },
   "devDependencies": {
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
+    "vitest": "^3.2.6",
     "jsdom": "^24.0.0"
   }
 }

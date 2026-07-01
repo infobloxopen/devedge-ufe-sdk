@@ -1,8 +1,17 @@
 {
   "name": "@infobloxopen/devedge-ufe-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Mechanism-only micro-frontend contract for devedge: lifecycle, loud nav-group validation, session seam, and manifest types. Zero runtime dependencies.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infobloxopen/devedge-ufe-sdk.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/infobloxopen/devedge-ufe-sdk/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/infobloxopen/devedge-ufe-sdk/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -13,7 +22,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
@@ -25,7 +36,7 @@
   },
   "devDependencies": {
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
+    "vitest": "^3.2.6",
     "jsdom": "^24.0.0"
   }
 }
