@@ -1,0 +1,67 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "notes-ufe": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "notes-ufe",
+      "architect": {
+        "build": {
+          "builder": "@angular-builders/custom-webpack:browser",
+          "options": {
+            "customWebpackConfig": {
+              "path": "extra-webpack.config.js",
+              "libraryName": "notes-ufe",
+              "libraryTarget": "umd"
+            },
+            "outputPath": "dist/notes-ufe",
+            "index": "src/index.html",
+            "main": "src/main.ufe.ts",
+            "polyfills": "src/polyfills.ts",
+            "tsConfig": "tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [],
+            "styles": ["src/styles.scss"],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "single-spa",
+              "single-spa-angular",
+              "systemjs-webpack-interop",
+              "oidc-client-ts",
+              "import-map-overrides"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                { "type": "initial", "maximumWarning": "1mb", "maximumError": "2mb" }
+              ],
+              "outputHashing": "none"
+            },
+            "development": {
+              "optimization": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-builders/custom-webpack:dev-server",
+          "options": {
+            "buildTarget": "notes-ufe:build",
+            "port": 4200
+          },
+          "configurations": {
+            "production": { "buildTarget": "notes-ufe:build:production" },
+            "development": { "buildTarget": "notes-ufe:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}

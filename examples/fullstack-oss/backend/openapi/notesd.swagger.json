@@ -1,0 +1,322 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "notesd/v1/notesd.proto",
+    "description": "NoteService (Note resource), scaffolded by `devedge-sdk new service`.\n\nThis is the PUBLIC, apx-governed API surface. It carries only engine-neutral\nannotations ((infoblox.authz.v1.rule), (infoblox.field.v1.opts)) — no ORM or\nengine options ever appear here (enforced by `apx policy check`). The GORM\nmodels and repository are generated from this proto by `buf generate` and are\ngit-ignored, consumer-local code (see .gitignore).",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "NoteService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/notes": {
+      "get": {
+        "operationId": "NoteService_ListNotes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNotesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "showDeleted",
+            "description": "AIP-148: include soft-deleted resources when true.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "NoteService"
+        ]
+      },
+      "post": {
+        "operationId": "NoteService_CreateNote",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Note"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "note",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Note"
+            }
+          }
+        ],
+        "tags": [
+          "NoteService"
+        ]
+      }
+    },
+    "/v1/notes/{id}": {
+      "get": {
+        "operationId": "NoteService_GetNote",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Note"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "readMask",
+            "description": "AIP-157: fields to return; empty means all fields.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NoteService"
+        ]
+      },
+      "delete": {
+        "operationId": "NoteService_DeleteNote",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteNoteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NoteService"
+        ]
+      }
+    },
+    "/v1/notes/{note.id}": {
+      "patch": {
+        "operationId": "NoteService_UpdateNote",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Note"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "note.id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "note",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "name is the AIP-122 resource name, e.g. \"notes/abc123\".",
+                  "readOnly": true
+                },
+                "accountId": {
+                  "type": "string",
+                  "description": "account_id scopes the resource to a tenant; the repository filters every\nquery by it (set from the request's tenant context — see server/main.go)."
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "display_name is a human-friendly label; indexed for lookup."
+                },
+                "description": {
+                  "type": "string"
+                },
+                "etag": {
+                  "type": "string",
+                  "description": "AIP-154 ETag: framework-managed; stamped on every write, surfaced on read.",
+                  "readOnly": true
+                },
+                "deleteTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "AIP-148: soft-delete timestamp; set by Delete, cleared by Undelete.",
+                  "readOnly": true
+                }
+              },
+              "description": "Note is the resource managed by Notesd."
+            }
+          },
+          {
+            "name": "updateMask",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "NoteService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1DeleteNoteResponse": {
+      "type": "object"
+    },
+    "v1ListNotesResponse": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Note"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Note": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "name is the AIP-122 resource name, e.g. \"notes/abc123\".",
+          "readOnly": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string",
+          "description": "account_id scopes the resource to a tenant; the repository filters every\nquery by it (set from the request's tenant context — see server/main.go)."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "display_name is a human-friendly label; indexed for lookup."
+        },
+        "description": {
+          "type": "string"
+        },
+        "etag": {
+          "type": "string",
+          "description": "AIP-154 ETag: framework-managed; stamped on every write, surfaced on read.",
+          "readOnly": true
+        },
+        "deleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "AIP-148: soft-delete timestamp; set by Delete, cleared by Undelete.",
+          "readOnly": true
+        }
+      },
+      "description": "Note is the resource managed by Notesd."
+    }
+  }
+}

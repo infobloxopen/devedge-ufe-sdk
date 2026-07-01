@@ -1,0 +1,246 @@
+components:
+    schemas:
+        protobufAny:
+            additionalProperties: {}
+            properties:
+                '@type':
+                    type: string
+            type: object
+        rpcStatus:
+            properties:
+                code:
+                    format: int32
+                    type: integer
+                details:
+                    items:
+                        $ref: '#/components/schemas/protobufAny'
+                    type: array
+                message:
+                    type: string
+            type: object
+        v1DeleteNoteResponse:
+            type: object
+        v1ListNotesResponse:
+            properties:
+                nextPageToken:
+                    type: string
+                notes:
+                    items:
+                        $ref: '#/components/schemas/v1Note'
+                    type: array
+            type: object
+        v1Note:
+            description: Note is the resource managed by Notesd.
+            properties:
+                accountId:
+                    description: |-
+                        account_id scopes the resource to a tenant; the repository filters every
+                        query by it (set from the request's tenant context — see server/main.go).
+                    type: string
+                deleteTime:
+                    description: 'AIP-148: soft-delete timestamp; set by Delete, cleared by Undelete.'
+                    format: date-time
+                    readOnly: true
+                    type: string
+                description:
+                    type: string
+                displayName:
+                    description: display_name is a human-friendly label; indexed for lookup.
+                    type: string
+                etag:
+                    description: 'AIP-154 ETag: framework-managed; stamped on every write, surfaced on read.'
+                    readOnly: true
+                    type: string
+                id:
+                    type: string
+                name:
+                    description: name is the AIP-122 resource name, e.g. "notes/abc123".
+                    readOnly: true
+                    type: string
+            type: object
+info:
+    description: |-
+        NoteService (Note resource), scaffolded by `devedge-sdk new service`.
+
+        This is the PUBLIC, apx-governed API surface. It carries only engine-neutral
+        annotations ((infoblox.authz.v1.rule), (infoblox.field.v1.opts)) — no ORM or
+        engine options ever appear here (enforced by `apx policy check`). The GORM
+        models and repository are generated from this proto by `buf generate` and are
+        git-ignored, consumer-local code (see .gitignore).
+    title: notesd/v1/notesd.proto
+    version: version not set
+openapi: 3.0.3
+paths:
+    /v1/notes:
+        get:
+            operationId: NoteService_ListNotes
+            parameters:
+                - in: query
+                  name: pageSize
+                  schema:
+                    format: int32
+                    type: integer
+                - in: query
+                  name: pageToken
+                  schema:
+                    type: string
+                - description: 'AIP-148: include soft-deleted resources when true.'
+                  in: query
+                  name: showDeleted
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/v1ListNotesResponse'
+                    description: A successful response.
+                default:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rpcStatus'
+                    description: An unexpected error response.
+            tags:
+                - NoteService
+        post:
+            operationId: NoteService_CreateNote
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/v1Note'
+                required: true
+                x-originalParamName: note
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/v1Note'
+                    description: A successful response.
+                default:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rpcStatus'
+                    description: An unexpected error response.
+            tags:
+                - NoteService
+    /v1/notes/{id}:
+        delete:
+            operationId: NoteService_DeleteNote
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/v1DeleteNoteResponse'
+                    description: A successful response.
+                default:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rpcStatus'
+                    description: An unexpected error response.
+            tags:
+                - NoteService
+        get:
+            operationId: NoteService_GetNote
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - description: 'AIP-157: fields to return; empty means all fields.'
+                  in: query
+                  name: readMask
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/v1Note'
+                    description: A successful response.
+                default:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rpcStatus'
+                    description: An unexpected error response.
+            tags:
+                - NoteService
+    /v1/notes/{note.id}:
+        patch:
+            operationId: NoteService_UpdateNote
+            parameters:
+                - in: path
+                  name: note.id
+                  required: true
+                  schema:
+                    type: string
+                - in: query
+                  name: updateMask
+                  schema:
+                    items:
+                        type: string
+                    type: array
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            description: Note is the resource managed by Notesd.
+                            properties:
+                                accountId:
+                                    description: |-
+                                        account_id scopes the resource to a tenant; the repository filters every
+                                        query by it (set from the request's tenant context — see server/main.go).
+                                    type: string
+                                deleteTime:
+                                    description: 'AIP-148: soft-delete timestamp; set by Delete, cleared by Undelete.'
+                                    format: date-time
+                                    readOnly: true
+                                    type: string
+                                description:
+                                    type: string
+                                displayName:
+                                    description: display_name is a human-friendly label; indexed for lookup.
+                                    type: string
+                                etag:
+                                    description: 'AIP-154 ETag: framework-managed; stamped on every write, surfaced on read.'
+                                    readOnly: true
+                                    type: string
+                                name:
+                                    description: name is the AIP-122 resource name, e.g. "notes/abc123".
+                                    readOnly: true
+                                    type: string
+                            type: object
+                required: true
+                x-originalParamName: note
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/v1Note'
+                    description: A successful response.
+                default:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rpcStatus'
+                    description: An unexpected error response.
+            tags:
+                - NoteService
+tags:
+    - name: NoteService

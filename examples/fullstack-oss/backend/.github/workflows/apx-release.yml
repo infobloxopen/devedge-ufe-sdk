@@ -1,0 +1,52 @@
+name: APX Release
+
+on:
+  push:
+    tags:
+      - "proto/**/v[0-9]*"
+      - "openapi/**/v[0-9]*"
+      - "avro/**/v[0-9]*"
+      - "jsonschema/**/v[0-9]*"
+      - "parquet/**/v[0-9]*"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APX_APP_ID }}
+          private-key: ${{ secrets.APX_APP_PRIVATE_KEY }}
+          owner: infobloxopen
+          repositories: apis
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install APX
+        uses: infobloxopen/apx@main
+
+      - name: Parse tag
+        id: tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate
+        run: |
+          apx lint
+          apx breaking --against HEAD^ || true
+
+      - name: Release to canonical repo
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          apx release submit \
+            --tag="${{ steps.tag.outputs.tag }}" \
+            --canonical-repo=github.com/infobloxopen/apis

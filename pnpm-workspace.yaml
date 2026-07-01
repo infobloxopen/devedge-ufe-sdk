@@ -1,2 +1,7 @@
 packages:
   - 'packages/*'
+  # The example under examples/ is intentionally NOT a workspace package: it is
+  # self-contained, installs independently, and is verified separately. Keeping
+  # it out of this glob is what keeps SDK CI (which builds ./packages/*) green.
+  # Do NOT add 'examples/**' here.
+  - '!examples/**'
