@@ -38,7 +38,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "import-map-overrides": "^5.1.0",
+    "import-map-overrides": "^6.1.0",
     "@infobloxopen/devedge-ufe-core": "workspace:*"
   },
   "devDependencies": {
