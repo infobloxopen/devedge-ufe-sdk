@@ -42,7 +42,7 @@
     "@infobloxopen/devedge-ufe-core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.1.0",
     "typescript": "^5.4.0",
     "vitest": "^3.2.6",
     "jsdom": "^24.0.0"
