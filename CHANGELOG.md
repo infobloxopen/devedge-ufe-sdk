@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## 0.1.3
+
+- **`@infobloxopen/devedge-ufe-angular`** gains a dev-only metadata-auth interceptor for local
+  development: `devAuthInterceptor`, `provideDevAuthHeaders()`, and the `DEV_AUTH_HEADERS` injection
+  token. It stamps `account-id`/`groups` request headers on allowed origins so a generated client can
+  round-trip against the devedge dev authorizer (which reads raw metadata, not a bearer subject). It is
+  a no-op when no headers are configured, and production continues to use real OIDC; the `de ufe new`
+  scaffold wires it into the dev environment. This closes the third surface (uFE) of the CLI/Terraform
+  local-dev auth gap. (#22, #23)
+
 ## 0.1.2
 
 Documentation and packaging pass — no runtime code changes.
