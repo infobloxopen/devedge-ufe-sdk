@@ -6,7 +6,13 @@ import {
   type Provider,
 } from '@angular/core';
 import { of, firstValueFrom } from 'rxjs';
-import { SESSION_PROVIDER, API_ORIGINS, bearerAuthInterceptor } from './index.js';
+import {
+  SESSION_PROVIDER,
+  API_ORIGINS,
+  DEV_AUTH_HEADERS,
+  bearerAuthInterceptor,
+  devAuthInterceptor,
+} from './index.js';
 import type { SessionProvider } from '@infobloxopen/devedge-ufe-core';
 
 /** Minimal HttpRequest stand-in: `url` + `clone({ setHeaders })`. */
@@ -134,5 +140,61 @@ describe('bearerAuthInterceptor', () => {
     await firstValueFrom(event$);
 
     expect(req.headers['Authorization']).toBe('Bearer my-token');
+  });
+});
+
+describe('devAuthInterceptor', () => {
+  it('stamps configured dev headers on a same-origin API request', async () => {
+    const req = fakeReq(`${PAGE_ORIGIN}/api/x`);
+    const next = vi.fn(() => of({ type: 4 } as never));
+
+    const event$ = inContext(
+      [
+        { provide: DEV_AUTH_HEADERS, useValue: { 'account-id': 't1', groups: 'admin' } },
+        { provide: API_ORIGINS, useValue: [PAGE_ORIGIN] },
+      ],
+      () => devAuthInterceptor(req as never, next as never),
+    );
+    await firstValueFrom(event$);
+
+    expect(req.headers['account-id']).toBe('t1');
+    expect(req.headers['groups']).toBe('admin');
+  });
+
+  it('is a no-op when DEV_AUTH_HEADERS is empty (production default)', async () => {
+    const req = fakeReq(`${PAGE_ORIGIN}/api/x`);
+    const next = vi.fn(() => of({ type: 4 } as never));
+
+    // Production wires provideDevAuthHeaders({}) (environment.prod.ts), so the
+    // token resolves to an empty object and the interceptor forwards untouched.
+    const event$ = inContext(
+      [
+        { provide: DEV_AUTH_HEADERS, useValue: {} },
+        { provide: API_ORIGINS, useValue: [PAGE_ORIGIN] },
+      ],
+      () => devAuthInterceptor(req as never, next as never),
+    );
+    await firstValueFrom(event$);
+
+    expect(req.headers['account-id']).toBeUndefined();
+    // The original (unmodified) request is forwarded untouched.
+    expect(next.mock.calls[0][0]).toBe(req);
+  });
+
+  it('never stamps identity on a cross-origin request', async () => {
+    const req = fakeReq('https://evil.example/steal');
+    const next = vi.fn(() => of({ type: 4 } as never));
+
+    const event$ = inContext(
+      [
+        { provide: DEV_AUTH_HEADERS, useValue: { 'account-id': 't1' } },
+        { provide: API_ORIGINS, useValue: [PAGE_ORIGIN] },
+      ],
+      () => devAuthInterceptor(req as never, next as never),
+    );
+    await firstValueFrom(event$);
+
+    expect(req.headers['account-id']).toBeUndefined();
+    expect(next.mock.calls[0][0]).toBe(req);
   });
 });

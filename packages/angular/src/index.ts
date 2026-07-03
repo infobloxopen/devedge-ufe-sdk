@@ -35,6 +35,20 @@ export function provideDevedgeSession(sp: SessionProvider): EnvironmentProviders
 }
 
 /**
+ * DI token carrying the dev-only identity headers {@link devAuthInterceptor}
+ * stamps onto API requests. Empty by default (the interceptor is a no-op).
+ */
+export const DEV_AUTH_HEADERS = new InjectionToken<Record<string, string>>('devedge.ufe.devAuthHeaders', {
+  providedIn: 'root',
+  factory: () => ({}),
+});
+
+/** Registers dev-only identity headers for {@link devAuthInterceptor} to stamp. */
+export function provideDevAuthHeaders(headers: Record<string, string>): EnvironmentProviders {
+  return makeEnvironmentProviders([{ provide: DEV_AUTH_HEADERS, useValue: headers }]);
+}
+
+/**
  * Functional HTTP interceptor that attaches `Authorization: Bearer <token>`
  * from the injected {@link SessionProvider}. On a 401 it calls
  * `session.login()` (fire-and-forget) and rethrows so the caller sees the 401.
@@ -75,6 +89,30 @@ export const bearerAuthInterceptor: HttpInterceptorFn = (req, next): Observable<
       });
     }),
   );
+};
+
+/**
+ * Dev-only functional interceptor that stamps the configured
+ * {@link DEV_AUTH_HEADERS} (e.g. `account-id` / `groups`) onto API requests, so
+ * a generated client round-trips against a devedge-sdk dev authorizer in local
+ * development. The dev authorizer reads raw identity metadata, not a bearer
+ * token, so the {@link bearerAuthInterceptor} alone gets `PermissionDenied`.
+ *
+ * It attaches headers ONLY to allowed origins (the same {@link API_ORIGINS}
+ * gate the bearer interceptor uses), so the identity never leaks cross-origin,
+ * and it is a no-op when `DEV_AUTH_HEADERS` is empty. In production leave the
+ * token empty: real OIDC and the bearer token replace it. Register it ahead of
+ * the bearer interceptor via
+ * `provideHttpClient(withInterceptors([devAuthInterceptor, bearerAuthInterceptor]))`.
+ */
+export const devAuthInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {
+  const headers = inject(DEV_AUTH_HEADERS);
+  const apiOrigins = inject(API_ORIGINS);
+
+  if (Object.keys(headers).length === 0 || !isAllowedOrigin(req.url, apiOrigins)) {
+    return next(req);
+  }
+  return next(req.clone({ setHeaders: headers }));
 };
 
 /**
