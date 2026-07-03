@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "typescript": "^5.4.0",
-    "vitest": "^3.2.6",
+    "vitest": "^4.1.9",
     "jsdom": "^24.0.0"
   }
 }
