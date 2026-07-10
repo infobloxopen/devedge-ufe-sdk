@@ -6,6 +6,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "../notes-ufe/node_modules/.bin/tsc -p tsconfig.json --noEmit"
+    "typecheck": "../notes-ufe/node_modules/.bin/tsc -p tsconfig.json --noEmit",
+    "build": "npx --yes esbuild root-config.ts --bundle --format=esm --sourcemap --outfile=root-config.js",
+    "start": "npm run build && npx --yes sirv-cli . --port 9000 --host 127.0.0.1 --dev"
   }
 }

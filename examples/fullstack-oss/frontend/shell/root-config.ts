@@ -22,6 +22,13 @@
  * loader fetches Angular's ESM bundle at runtime; SystemJS could not, because
  * ng-serve emits ESM, not SystemJS-format bundles.
  */
+// The shell/host loads zone.js ONCE for the whole page. Angular uFEs need a
+// global Zone; in a micro-frontend it must be loaded by the host (not bundled
+// per-uFE, which risks multiple Zone instances). The uFE build keeps zone.js in
+// a separate `polyfills.js` entry that the native-import loader does not fetch,
+// so the host supplies it here — before any uFE bootstraps.
+import 'zone.js';
+
 import { start } from 'single-spa';
 import { OidcSessionProvider } from '@infobloxopen/devedge-ufe-oidc';
 import {
@@ -29,6 +36,8 @@ import {
   type SingleSpaLifecycles,
 } from '@infobloxopen/devedge-ufe-single-spa';
 import {
+  StubSessionProvider,
+  type SessionProvider,
   staticGroupRegistry,
   assertNavContributions,
 } from '@infobloxopen/devedge-ufe-core';
@@ -56,35 +65,55 @@ function activeOnHash(route: string): (location: Location) => boolean {
  * keeps webpack from bundling the specifier at build time, so the import goes
  * through the runtime importmap to the CDN bundle. Mirrors the POC's loadMfe.
  *
- * The uFE's main.ufe.ts exports the three single-spa lifecycle FUNCTIONS, so we
- * type the module as SingleSpaLifecycles (single-spa's own LifeCycles also
- * allows arrays; the cast pins it to the function form createShell expects).
+ * The uFE builds a webpack UMD bundle (`library:'notes-ufe'`,
+ * `libraryTarget:'umd'`), so a native `import()` yields an empty ESM namespace
+ * and the single-spa lifecycles land on `globalThis['notes-ufe']`. We therefore
+ * check, in order: the module's own `mount` (native ESM), a `default.mount`
+ * (interop default), then `globalThis[globalName]` (the UMD global).
  */
-function loadMfe(spec: string): Promise<SingleSpaLifecycles> {
-  return import(/* webpackIgnore: true */ spec) as Promise<SingleSpaLifecycles>;
+async function loadMfe(spec: string, globalName: string): Promise<SingleSpaLifecycles> {
+  const mod = (await import(/* webpackIgnore: true */ spec)) as Record<string, unknown>;
+  const g = globalThis as Record<string, unknown>;
+  const cand =
+    typeof (mod as { mount?: unknown }).mount === 'function' ? mod
+    : (mod as { default?: { mount?: unknown } }).default && typeof (mod as { default?: { mount?: unknown } }).default!.mount === 'function' ? (mod as { default: unknown }).default
+    : g[globalName];
+  const lc = cand as SingleSpaLifecycles | undefined;
+  if (!lc || typeof lc.mount !== 'function') {
+    throw new Error(`uFE "${spec}": no single-spa lifecycles found (checked ESM exports and globalThis["${globalName}"] — bundle library target?)`);
+  }
+  return lc;
 }
 
 /** Boots the shell: owns OIDC, validates nav, registers the uFE(s), starts. */
 export async function bootShell(): Promise<void> {
-  // 1. The shell owns the session — instantiated exactly ONCE. Generic OIDC:
-  //    point `authority` at any issuer (Dex in dev). No provider-specific code.
-  const session = new OidcSessionProvider({
-    authority: environment.oidc.authority,
-    clientId: environment.oidc.clientId,
-    redirectUri: environment.oidc.redirectUri,
-    silentRedirectUri: environment.oidc.silentRedirectUri,
-    scope: environment.oidc.scope,
-  });
-
-  // Complete the auth-code / silent-renew redirects on their dedicated paths.
-  // These are OIDC redirect endpoints (path-based), independent of the uFE hash
-  // routing above.
-  if (location.pathname === '/callback') {
-    await session.completeLoginRedirect();
-    history.replaceState(null, '', `/${NOTES_HASH}`);
-  } else if (location.pathname === '/silent-refresh') {
-    await session.completeSilentRedirect();
-    return;
+  // 1. The shell owns the session — instantiated exactly ONCE. The provider is
+  //    chosen by `environment.useDevSession`: a no-auth StubSessionProvider so
+  //    the shell renders locally without an OIDC issuer, or the generic
+  //    OidcSessionProvider (point `authority` at any issuer). A uFE never
+  //    constructs a session either way.
+  let session: SessionProvider;
+  if (environment.useDevSession) {
+    session = new StubSessionProvider();
+  } else {
+    const oidc = new OidcSessionProvider({
+      authority: environment.oidc.authority,
+      clientId: environment.oidc.clientId,
+      redirectUri: environment.oidc.redirectUri,
+      silentRedirectUri: environment.oidc.silentRedirectUri,
+      scope: environment.oidc.scope,
+    });
+    // Complete the auth-code / silent-renew redirects on their dedicated paths.
+    // These are OIDC redirect endpoints (path-based), independent of the uFE
+    // hash routing above.
+    if (location.pathname === '/callback') {
+      await oidc.completeLoginRedirect();
+      history.replaceState(null, '', `/${NOTES_HASH}`);
+    } else if (location.pathname === '/silent-refresh') {
+      await oidc.completeSilentRedirect();
+      return;
+    }
+    session = oidc;
   }
 
   // 2. The host owns the nav-group taxonomy. The notes uFE's default group is
@@ -101,7 +130,7 @@ export async function bootShell(): Promise<void> {
       {
         name: 'notes-ufe',
         activeWhen: activeOnHash(NOTES_HASH),
-        load: () => loadMfe('notes-ufe'),
+        load: () => loadMfe('notes-ufe', 'notes-ufe'),
       },
     ],
   });

@@ -52,12 +52,12 @@
         "serve": {
           "builder": "@angular-builders/custom-webpack:dev-server",
           "options": {
-            "buildTarget": "notes-ufe:build",
+            "browserTarget": "notes-ufe:build",
             "port": 4200
           },
           "configurations": {
-            "production": { "buildTarget": "notes-ufe:build:production" },
-            "development": { "buildTarget": "notes-ufe:build:development" }
+            "production": { "browserTarget": "notes-ufe:build:production" },
+            "development": { "browserTarget": "notes-ufe:build:development" }
           },
           "defaultConfiguration": "development"
         }
