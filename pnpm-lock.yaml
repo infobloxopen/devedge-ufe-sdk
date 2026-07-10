@@ -19,8 +19,8 @@ importers:
         version: link:../core
     devDependencies:
       '@angular/common':
-        specifier: ^15.2.10
-        version: 15.2.10(@angular/core@15.2.10(rxjs@7.8.2)(zone.js@0.13.3))(rxjs@7.8.2)
+        specifier: ^20.3.25
+        version: 20.3.25(@angular/core@15.2.10(rxjs@7.8.2)(zone.js@0.13.3))(rxjs@7.8.2)
       '@angular/compiler':
         specifier: ^15.2.10
         version: 15.2.10(@angular/core@15.2.10(rxjs@7.8.2)(zone.js@0.13.3))
@@ -117,11 +117,11 @@ importers:
 
 packages:
 
-  '@angular/common@15.2.10':
-    resolution: {integrity: sha512-jdBn3fctkqoNrJn9VLsUHpcCEhCxWSczdsR+BBbD6T0oLl6vMrAVNjPwfBejnlgfWN1KoRU9kgOYsMxa5apIWQ==}
-    engines: {node: ^14.20.0 || ^16.13.0 || >=18.10.0}
+  '@angular/common@20.3.25':
+    resolution: {integrity: sha512-rnRGcXbjet0DHgkRL4Dqxk21G2T4UypVfiTV/fay58H8w9U89PJ1L6gRmk8B/uyfpii/9r23cBwnpcguQykxYw==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
     peerDependencies:
-      '@angular/core': 15.2.10
+      '@angular/core': 20.3.25
       rxjs: ^6.5.3 || ^7.4.0
 
   '@angular/compiler@15.2.10':
@@ -965,7 +965,7 @@ packages:
 
 snapshots:
 
-  '@angular/common@15.2.10(@angular/core@15.2.10(rxjs@7.8.2)(zone.js@0.13.3))(rxjs@7.8.2)':
+  '@angular/common@20.3.25(@angular/core@15.2.10(rxjs@7.8.2)(zone.js@0.13.3))(rxjs@7.8.2)':
     dependencies:
       '@angular/core': 15.2.10(rxjs@7.8.2)(zone.js@0.13.3)
       rxjs: 7.8.2
