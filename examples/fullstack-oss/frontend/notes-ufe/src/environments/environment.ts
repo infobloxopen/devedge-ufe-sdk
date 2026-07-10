@@ -17,6 +17,13 @@
 export const environment = {
   production: false,
 
+  /**
+   * Use a no-auth dev session so the shell renders locally without an OIDC
+   * issuer. Set false (and run an issuer at `oidc.authority`) to exercise real
+   * OIDC.
+   */
+  useDevSession: true,
+
   /** Generic OIDC config. Point `authority` at any OIDC issuer. */
   oidc: {
     authority: 'http://localhost:5556/dex',
