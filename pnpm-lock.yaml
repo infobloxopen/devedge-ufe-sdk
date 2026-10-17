@@ -61,8 +61,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       import-map-overrides:
-        specifier: ^5.1.0
-        version: 5.1.1
+        specifier: ^6.1.0
+        version: 6.1.0
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -527,9 +527,9 @@ packages:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
 
-  cookie@0.6.0:
-    resolution: {integrity: sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==}
-    engines: {node: '>= 0.6'}
+  cookie@1.1.1:
+    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
+    engines: {node: '>=18'}
 
   cssstyle@4.6.0:
     resolution: {integrity: sha512-2z+rWdzbbSZv6/rhtvzvqeZQHrBaqgogqt85sqFNbabZOuFbCVFb8kPeEtZjiKkbrm395irpNKiYeFeLiQnFPg==}
@@ -659,8 +659,8 @@ packages:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
 
-  import-map-overrides@5.1.1:
-    resolution: {integrity: sha512-Tn/Jkr0ZRBk7bf9VrmvAj2J6iFtVXMJi+VCLc3ALlZa28VwgZi9/D+GjpK1ti3ERSZ07nQw+4oYUEWhqiMSvKA==}
+  import-map-overrides@6.1.0:
+    resolution: {integrity: sha512-RgrnojVe/aEMW9SauUQizSbjt80Xf5clkmbFo0p6h/0igAI6WAb25d3OhHGDJNdppUHEeHpPEimYP1liDSZn+A==}
 
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
@@ -1248,7 +1248,7 @@ snapshots:
     dependencies:
       delayed-stream: 1.0.0
 
-  cookie@0.6.0: {}
+  cookie@1.1.1: {}
 
   cssstyle@4.6.0:
     dependencies:
@@ -1399,9 +1399,9 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  import-map-overrides@5.1.1:
+  import-map-overrides@6.1.0:
     dependencies:
-      cookie: 0.6.0
+      cookie: 1.1.1
 
   is-potential-custom-element-name@1.0.1: {}
 
